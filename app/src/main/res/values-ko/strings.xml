@@ -1,0 +1,5 @@
+﻿<resources>
+  <string name="app_name">카메라 샘플</string>
+  <string name="button_flash_on">플래시 켜짐</string>
+  <string name="button_capture">사진찍기</string>
+</resources>
