@@ -64,6 +64,12 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
         super(context, attrs);
     }
 
+    // 2022/08/12 T90 카메라 preview, picture 사이즈 설정
+    final static int PREVIEW_WIDTH = 1920;
+    final static int PREVIEW_HEIGHT = 1080;
+    final static int PICTURE_WIDTH = 1920;
+    final static int PICTURE_HEIGHT = 1080;
+
     protected boolean initializeCamera(int width, int height) {
         Log.d(TAG, "Initialize java camera");
         boolean result = true;
@@ -142,7 +148,9 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                 // Camera 사진의 크기를 최대로 설정한다.
                 List<Camera.Size> pictureSizes = params.getSupportedPictureSizes();
                 if (pictureSizes != null) {
-                    params.setPictureSize(pictureSizes.get(0).width, pictureSizes.get(0).height);
+                    // 2022/08/12 1920x1080 크기로 설정
+                    //params.setPictureSize(pictureSizes.get(0).width, pictureSizes.get(0).height);
+                    params.setPictureSize(PICTURE_WIDTH, PICTURE_HEIGHT);
                     params.setPictureFormat(ImageFormat.NV21);
                 }
 
@@ -152,15 +160,19 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
 
                     params.setPreviewFormat(ImageFormat.NV21);
                     Log.d(TAG, "Set preview size to " + Integer.valueOf((int) frameSize.width) + "x" + Integer.valueOf((int) frameSize.height));
-                    params.setPreviewSize((int) frameSize.width, (int) frameSize.height);
+                    // 2022/08/12 1920x1080 크기로 설정
+                    //params.setPreviewSize((int) frameSize.width, (int) frameSize.height);
+                    params.setPreviewSize(PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH && !Build.MODEL.equals("GT-I9100"))
                         params.setRecordingHint(true);
 
                     List<String> FocusModes = params.getSupportedFocusModes();
-                    if (FocusModes != null && FocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
-                        params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
-                    }
+                    // 2022/08/12 FOCUS_MODE_CONTINUOUS_PICTURE로 변경. 프리뷰 화면에서 오토 포커스 동작
+                    params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+
+                    // 2022/08/12 화이트 밸런스 설정
+                    params.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
 
                     mCamera.setParameters(params);
                     params = mCamera.getParameters();
@@ -172,6 +184,11 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
                         mScale = Math.min(((float) height) / mFrameHeight, ((float) width) / mFrameWidth);
                     else
                         mScale = 0;
+
+                    // 2022/08/12 90도 회전 되므로 width height 비율 변경
+                    if (mScale != 0) {
+                        mScale = Math.min(((float) height) / mFrameWidth, ((float) width) / mFrameHeight);
+                    }
 
                     if (mFpsMeter != null) {
                         mFpsMeter.setResolution(mFrameWidth, mFrameHeight);

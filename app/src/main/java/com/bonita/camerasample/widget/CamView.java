@@ -1,12 +1,15 @@
 package com.bonita.camerasample.widget;
 
 import android.content.Context;
+import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.hardware.Camera.Size;
 import android.util.AttributeSet;
 
 import org.opencv.android.JavaCameraView;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -49,21 +52,56 @@ public class CamView extends JavaCameraView {
     public void setFlashMode(boolean b) {
         Parameters params = mCamera.getParameters();
         if (b) {
-            params.setFlashMode(Parameters.FLASH_MODE_TORCH);
+            // FLASH_MODE_TORCH: preview, auto-focus, snapshot 동안 on
+            // FLASH_MODE_ON: snapshot 동안 on
+            //params.setFlashMode(Parameters.FLASH_MODE_TORCH);
+            params.setFlashMode(Parameters.FLASH_MODE_ON);
         } else {
             params.setFlashMode(Parameters.FLASH_MODE_OFF);
         }
         mCamera.setParameters(params);
     }
 
-    /**
-     * 화이트 밸런스 설정, 카메라 기본 값은 Auto
-     *
-     * @param wb_params : 화이트 밸런스 파라미터 입력, Camera.Paramters.WHITE_BALANCE_**** 사용
-     */
-    public void setWhiteBalance(String wb_params) {
+    // 2022/08/12 사진 찍기 루틴 추가
+    public void takePicture(String filename) {
         Parameters params = mCamera.getParameters();
-        params.setWhiteBalance(wb_params);
+        params.setRotation(90); // 사진 이미지 정보를 90도 회전
         mCamera.setParameters(params);
+
+        final Object lock = new Object();
+
+        mCamera.takePicture(
+                new Camera.ShutterCallback() {
+                    public void onShutter() {
+                        // 시스템 셧터 음이 출력되므로 필요 없음
+                    }
+                },
+                null, // raw PictureCallback
+                new Camera.PictureCallback() {
+                    public void onPictureTaken(byte[] data, Camera camera) {
+                        try {
+                            FileOutputStream os = new FileOutputStream(filename);
+                            os.write(data);
+                            os.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        } finally {
+                            synchronized (lock) {
+                                lock.notify();
+                            }
+                        }
+                    }
+                });
+
+        // 이미지 저장이 완료될 때까지 wait
+        synchronized (lock) {
+            try {
+                lock.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        mCamera.startPreview();
     }
 }
